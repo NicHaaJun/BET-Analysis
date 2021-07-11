@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pygaps as pg
 from pygaps.graphing.calc_graphs import bet_plot, roq_plot
+from pygaps.graphing.isotherm_graphs import plot_iso
 from pygaps.characterisation.area_bet import bet_transform, roq_transform, area_BET_raw
 from pygaps.core.adsorbate import Adsorbate
 
@@ -85,7 +86,16 @@ class BET:
         return isotherm
 
     def plot_isotherm(self):
-        return
+
+        fig_iso, ax_iso = plt.subplots(figsize=[7, 6])
+
+        ax_iso.set_title('Isotherm', fontsize=20)
+
+        plot_iso(self.isotherm, ax=ax_iso)
+
+        fig_iso.tight_layout()
+
+        return ax_iso
 
     def BET_analysis(self):
 
@@ -100,16 +110,16 @@ class BET:
 
 
         BET_results = {
-                            'area': bet_area,
-                            'c_const': c_const,
-                            'n_monolayer': n_monolayer,
-                            'p_monolayer': p_monolayer,
-                            'bet_slope': slope,
-                            'bet_intercept': intercept,
-                            'corr_coef': corr_coef,
+                            'bet_area': np.round(bet_area, 2),
+                            'c_const': np.round(c_const, 2),
+                            'n_monolayer': np.round(n_monolayer, 4),
+                            'p_monolayer': np.round(p_monolayer, 4),
+                            'bet_slope': np.round(slope, 2),
+                            'bet_intercept': np.round(intercept, 2),
+                            'corr_coef': np.round(corr_coef, 4),
                             'pressure_range' : [
-                                                self.isotherm.pressure(branch='ads')[minimum],
-                                                self.isotherm.pressure(branch='ads')[maximum] 
+                                                np.round(self.isotherm.pressure(branch='ads')[minimum], 4),
+                                                np.round(self.isotherm.pressure(branch='ads')[maximum], 4) 
                                                 ],
                             'minimum' : minimum,
                             'maximum' : maximum,
@@ -120,8 +130,9 @@ class BET:
     def plot_bet(self):
 
         fig_bet, ax_bet = plt.subplots(figsize=[4, 4])
-        _, _, n_monolayer, p_monolayer, slope, intercept, _, minimum, maximum, _, _  = self.BET_results.values()
+        _, _, n_monolayer, p_monolayer, slope, intercept, _, _, minimum, maximum, _ = self.BET_results.values()
 
+        ax_bet.set_title('BET plot')
         bet_plot_ax = bet_plot(
             self.isotherm.pressure(branch='ads'),
             bet_transform(
@@ -144,7 +155,8 @@ class BET:
 
         fig, ax = plt.subplots(figsize=[4, 4])
 
-        _, _, n_monolayer, p_monolayer, slope, intercept, _, minimum, maximum, _, _  = self.BET_results.values()
+        ax.set_title('Rouquerol Plot')
+        _, _, n_monolayer, p_monolayer, slope, intercept, _, _, minimum, maximum, _ = self.BET_results.values()
 
         roq_plot_ax = roq_plot(
             self.isotherm.pressure(branch='ads'),
