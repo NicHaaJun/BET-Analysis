@@ -87,7 +87,7 @@ class BET:
 
     def plot_isotherm(self):
 
-        fig_iso, ax_iso = plt.subplots(figsize=[7, 6])
+        fig_iso, ax_iso = plt.subplots(figsize=[5.5, 4.5])
 
         ax_iso.set_title('Isotherm', fontsize=20)
 
@@ -129,7 +129,7 @@ class BET:
             
     def plot_bet(self):
 
-        fig_bet, ax_bet = plt.subplots(figsize=[4, 4])
+        fig_bet, ax_bet = plt.subplots(figsize=[5.5, 4.5])
         _, _, n_monolayer, p_monolayer, slope, intercept, _, _, minimum, maximum, _ = self.BET_results.values()
 
         ax_bet.set_title('BET plot')
@@ -153,7 +153,7 @@ class BET:
 
     def plot_roq(self):
 
-        fig, ax = plt.subplots(figsize=[4, 4])
+        fig, ax = plt.subplots(figsize=[5.5, 4.5])
 
         ax.set_title('Rouquerol Plot')
         _, _, n_monolayer, p_monolayer, slope, intercept, _, _, minimum, maximum, _ = self.BET_results.values()
