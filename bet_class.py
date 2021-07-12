@@ -13,12 +13,14 @@ from scipy.constants import R
 
 class BET:
 
-    def __init__(self, file):
+    def __init__(self, file, limits=None):
         self.file = file
         self.adsorption_data, self.desorption_data, self.all_data = self.read_DAT()
         self.isotherm = self.create_isotherm()
         self.adsorbate = Adsorbate.find(self.isotherm.adsorbate)
+        self.limits = limits
         self.BET_results = self.BET_analysis()
+
 
     def read_DAT(self):
 
@@ -106,7 +108,8 @@ class BET:
                                 loading_unit='mol',
                                 loading_basis='molar'
                                 ), 
-                            cross_section=self.adsorbate.get_prop("cross_sectional_area"))
+                            cross_section=self.adsorbate.get_prop("cross_sectional_area"),
+                            limits=self.limits)
 
 
         BET_results = {
