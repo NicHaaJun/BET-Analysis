@@ -2,7 +2,9 @@ import pandas as pd
 import ipywidgets as widgets
 import numpy as np
 import matplotlib.pyplot as plt
+import xlsxwriter as xl
 import pygaps as pg
+from pygaps.parsing.csv import isotherm_to_csv
 from pygaps.graphing.calc_graphs import bet_plot, roq_plot
 from pygaps.graphing.isotherm_graphs import plot_iso
 from pygaps.characterisation.area_bet import bet_transform, roq_transform, area_BET_raw
@@ -127,6 +129,7 @@ class BET:
                             'maximum' : maximum,
                             'limits': [minimum, maximum]
                         }
+        self.BET_results = BET_results
         return BET_results
             
     def plot_bet(self):
@@ -188,19 +191,110 @@ class BET:
         _, result_file_name, result_path = self._get_result_path()
 
         if filepath == 'default':
+            res_path = os.path.join('RESULTS', 'ISOTHERM_' + result_file_name + '.json')
             if os.path.isdir('RESULTS'):
-                self.isotherm.to_json(os.path.join('RESULTS', result_file_name))
+                self.isotherm.to_json(res_path)
             else:
                 os.mkdir('RESULTS')
-                self.isotherm.to_json(os.path.join('RESULTS', result_file_name))
+                self.isotherm.to_json(res_path)
 
         else:
             self.isotherm.to_json(result_path)
 
-    def to_csv(self):
+    def to_csv(self, filepath='default'):
+
+        _, result_file_name, result_path = self._get_result_path()
+
+        if filepath == 'default':
+            res_path = os.path.join('RESULTS', 'ISOTHERM_' + result_file_name + '.csv')
+            if os.path.isdir('RESULTS'):
+                isotherm_to_csv(self.isotherm, res_path)
+            else:
+                os.mkdir('RESULTS')
+                isotherm_to_csv(self.isotherm, res_path)
+        else:
+            isotherm_to_csv(self.isotherm, result_path)
+
         return
 
-    def to_excel(self):
+    def to_excel(self, filepath='default'):
+
+        ## Geeting file path
+        _, result_file_name, result_path = self._get_result_path()
+
+        if filepath == 'default':
+            res_path = os.path.join('RESULTS', 'ISOTHERM_' + result_file_name + '.xlsx')
+            if not os.path.isdir('RESULTS'):
+                os.mkdir('RESULTS')
+        
+        writer = pd.ExcelWriter(res_path, engine='xlsxwriter')
+
+        ## Creating isotherm dataframes
+        df_isotherm = []
+        for branch in ['ads', 'des']:
+            isotherm_points = {
+                'pressure_{}'.format(branch) : self.isotherm.pressure(branch=branch),
+                'loading_{}'.format(branch) : self.isotherm.loading(branch=branch),
+            }
+            df = pd.DataFrame(isotherm_points)
+            df_isotherm.append(df)
+
+
+        start_cols = [0, 2]
+        for i, df in enumerate(df_isotherm):
+            df.to_excel(writer, sheet_name='isotherm',
+             startcol=start_cols[i], startrow=11, index=False)
+
+
+        ## Creating BET dataframe
+        
+        main_bet_points = {
+            'pressure' : self.isotherm.pressure(branch='ads'),
+            'bet_points' : bet_transform(
+                self.isotherm.pressure(branch='ads'),
+                self.isotherm.loading(
+                         branch='ads',
+                         loading_unit='mol',
+                         loading_basis='molar')
+                         )
+        }
+
+        df_main_bet_points = pd.DataFrame(main_bet_points)
+        df_main_bet_points.to_excel(writer, sheet_name='BET',
+             startcol=0, startrow=11, index=False)
+
+        bet_minimum = self.BET_results['minimum']
+        bet_maximum = self.BET_results['maximum']
+
+        selected_bet_point = {
+            'pressure_selected' : self.isotherm.pressure(branch='ads')[bet_minimum:bet_maximum],
+            'bet_points_selected' : bet_transform(
+                self.isotherm.pressure(branch='ads'),
+                self.isotherm.loading(
+                         branch='ads',
+                         loading_unit='mol',
+                         loading_basis='molar')
+                         )[bet_minimum:bet_maximum]
+        }
+        
+        df_selected_bet_point = pd.DataFrame(selected_bet_point)
+        df_selected_bet_point.to_excel(writer, sheet_name='BET',
+             startcol=2, startrow=11, index=False)
+
+        bet_p_monolayer = self.BET_results['p_monolayer']
+        bet_n_monolayer = self.BET_results['n_monolayer']
+
+        bet_monolayer_point = {
+            'pressure_monolayer' : bet_p_monolayer,
+            'bet_point_monolayer' : bet_transform(bet_p_monolayer, bet_n_monolayer)
+        }
+
+        df_monolayer_point = pd.DataFrame(bet_monolayer_point)
+        df_monolayer_point.to_excel(writer, sheet_name='BET',
+             startcol=4, startrow=11, index=False)
+
+        writer.save()
+
         return
 
     ### METHOD WHICH GETS THE RESULT PATH
