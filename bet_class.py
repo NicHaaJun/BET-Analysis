@@ -88,13 +88,12 @@ class BET:
         return isotherm
 
     def plot_isotherm(self):
+        file_name, _, _ = self._get_result_path()
 
         fig_iso, ax_iso = plt.subplots(figsize=[5.5, 4.5])
-
-        ax_iso.set_title('Isotherm', fontsize=20)
+        ax_iso.set_title('Isotherm: ' + file_name, fontsize=14)
 
         plot_iso(self.isotherm, ax=ax_iso)
-
         fig_iso.tight_layout()
 
         return ax_iso
@@ -119,7 +118,7 @@ class BET:
                             'p_monolayer': np.round(p_monolayer, 4),
                             'bet_slope': np.round(slope, 2),
                             'bet_intercept': np.round(intercept, 2),
-                            'corr_coef': np.round(corr_coef, 4),
+                            'corr_coef': np.round(corr_coef, 5),
                             'pressure_range' : [
                                                 np.round(self.isotherm.pressure(branch='ads')[minimum], 4),
                                                 np.round(self.isotherm.pressure(branch='ads')[maximum], 4) 
@@ -131,12 +130,12 @@ class BET:
         return BET_results
             
     def plot_bet(self):
+        file_name, _, _ = self._get_result_path()
 
         fig_bet, ax_bet = plt.subplots(figsize=[5.5, 4.5])
         _, _, n_monolayer, p_monolayer, slope, intercept, _, _, minimum, maximum, _ = self.BET_results.values()
 
-        ax_bet.set_title('BET plot')
-        bet_plot_ax = bet_plot(
+        ax_bet = bet_plot(
             self.isotherm.pressure(branch='ads'),
             bet_transform(
                 self.isotherm.pressure(branch='ads'),
@@ -150,18 +149,20 @@ class BET:
             ax=ax_bet
         )
 
+        ax_bet.set_title('BET plot: ' + file_name, fontsize=14)
         fig_bet.tight_layout()
 
-        return bet_plot_ax
+        return ax_bet
 
     def plot_roq(self):
 
-        fig, ax = plt.subplots(figsize=[5.5, 4.5])
+        file_name, _, _ = self._get_result_path()
 
-        ax.set_title('Rouquerol Plot')
+        fig_roq, ax_roq = plt.subplots(figsize=[5.5, 4.5])
+
         _, _, n_monolayer, p_monolayer, slope, intercept, _, _, minimum, maximum, _ = self.BET_results.values()
 
-        roq_plot_ax = roq_plot(
+        ax_roq = roq_plot(
             self.isotherm.pressure(branch='ads'),
             roq_transform(
                 self.isotherm.pressure(branch='ads'),
@@ -172,30 +173,21 @@ class BET:
                          ),
             minimum, maximum, p_monolayer,
             roq_transform(p_monolayer, n_monolayer),
-            ax=ax
+            ax=ax_roq
             )
-        fig.tight_layout()
 
-        return roq_plot_ax
+        ax_roq.set_title('Rouquerol plot: ' + file_name, fontsize=14)
+        fig_roq.tight_layout()
 
+        return ax_roq
+
+    ##### EXPORT METHODS
 
     def to_json(self, filepath='default'):
 
-        list_path = self.file.split('\\')
+        _, result_file_name, result_path = self._get_result_path()
 
-        result_folder = '\\'.join(list_path[:-1] + ['RESULTS'])
-        result_file_name = list_path[-1].split('.')[0] + '_result'
-
-        def result_path(result_folder, result_file_name):
-
-            if os.path.isdir(result_folder):
-                return os.path.join(result_folder, result_file_name)
-            else:
-                os.mkdir(result_folder)
-                return os.path.join(result_folder, result_file_name)
-        
         if filepath == 'default':
-
             if os.path.isdir('RESULTS'):
                 self.isotherm.to_json(os.path.join('RESULTS', result_file_name))
             else:
@@ -203,7 +195,26 @@ class BET:
                 self.isotherm.to_json(os.path.join('RESULTS', result_file_name))
 
         else:
-            self.isotherm.to_json(result_path(result_folder, result_file_name))
+            self.isotherm.to_json(result_path)
 
-        return pg.isotherm_to_json(self.isotherm)
+    def to_csv(self):
+        return
 
+    def to_excel(self):
+        return
+
+    ### METHOD WHICH GETS THE RESULT PATH
+    def _get_result_path(self):
+
+        list_path = self.file.split('\\')
+        result_folder = '\\'.join(list_path[:-1] + ['RESULTS'])
+        file_name = list_path[-1].split('.')[0]
+        result_file_name = file_name + '_result'
+
+        if os.path.isdir(result_folder):
+            result_path = os.path.join(result_folder, result_file_name)
+        else:
+            os.mkdir(result_folder)
+            result_path = os.path.join(result_folder, result_file_name)
+
+        return file_name, result_file_name, result_path
