@@ -227,9 +227,13 @@ class BET:
             if not os.path.isdir('RESULTS'):
                 os.mkdir('RESULTS')
         
-        writer = pd.ExcelWriter(res_path, engine='xlsxwriter')
+        writer = pd.ExcelWriter(res_path, engine='xlsxwriter')  # Defining the xlsx writer
+        workbook = writer.book  # Definint the workbook
+        cell_format = workbook.add_format({'bold': True, 'italic': True}) # cell format "bold"
+        cell_format_it = workbook.add_format({'italic': True}) # cell format "italic"
 
         ## Creating isotherm sheet
+        isotherm_sheet = 'isotherm'
         df_isotherm = []
         for branch in ['ads', 'des']:
             isotherm_points = {
@@ -239,15 +243,93 @@ class BET:
             df = pd.DataFrame(isotherm_points)
             df_isotherm.append(df)
 
-
+        isotherm_start_row = 11
         start_cols = [0, 2]
         for i, df in enumerate(df_isotherm):
-            df.to_excel(writer, sheet_name='isotherm',
-             startcol=start_cols[i], startrow=11, index=False)
+            df.to_excel(writer, sheet_name=isotherm_sheet,
+             startcol=start_cols[i], startrow=isotherm_start_row, index=False)
+        
+        # -- writing isotherm dictonary to excel sheet
+        iso_dict = {}
+        for r in self.isotherm.to_csv().split('\n')[:10]:
+            key, val = r.split(',')
+            iso_dict[key] = val
+        worksheet_iso = writer.sheets[isotherm_sheet]
 
+        row_num = 0  # The start column number
+        for key, value in iso_dict.items(): # Convert non-list value to list
+            worksheet_iso.write(row_num, 0, key, cell_format)
+            worksheet_iso.write_string(row_num, 1, value)
+            row_num += 1
+
+        # -- plotting isotherm
+
+        chart_isotherm = workbook.add_chart({'type' : 'scatter', 'subtype': 'smooth_with_markers'})
+
+        rows_ads = self.isotherm.pressure(branch='ads').shape[0]
+        rows_des = self.isotherm.pressure(branch='des').shape[0]
+
+        chart_isotherm.add_series({
+                                    'name': '{}-ads.'.format(str(self.isotherm.adsorbate)),
+                                    'categories': [isotherm_sheet, isotherm_start_row+1, 0, isotherm_start_row+rows_ads+1, 0],
+                                    'values':  [isotherm_sheet, isotherm_start_row+1, 1, isotherm_start_row+rows_ads+1, 1],
+                                    'marker': {
+                                                'type': 'circle',
+                                                'size': 8,
+                                                'fill' : {'color': '#144F82'},
+                                                'border': {
+                                                    'color': '#144F82',
+                                                    'width' : 1.5},
+                                                    },
+                                                'line' : {'color' : '#144F82'}
+                                })
+        
+        chart_isotherm.add_series({
+                                    'name': '{}-des.'.format(str(self.isotherm.adsorbate)),
+                                    'categories': [isotherm_sheet, 13, 2, isotherm_start_row+rows_des+1, 2],
+                                    'values':  [isotherm_sheet, 13, 3, isotherm_start_row+rows_des+1, 3],
+                                    'marker': {
+                                                'type': 'circle',
+                                                'size': 8,
+                                                'fill' : {'color': 'white'},
+                                                'border': {
+                                                    'color': '#144F82',
+                                                    'width' : 1.5},
+                                                    },
+                                                'line' : {
+                                                    'color' : '#144F82',
+                                                    'dash_type': 'dash'}
+                                })
+
+        chart_isotherm.set_x_axis({
+                    'name': 'Pressure [p/p0]',
+                    'name_font' : {'size' : 18},
+                    'num_format' : '0.00',
+                    'num_font':  {'size': 13 },
+                    'max' : 1,
+                    'min' : 0,
+            })
+
+        chart_isotherm.set_y_axis({
+                'name': 'Loading [ml/g (STP)]',
+                'name_font' : {'size' : 18},
+                'num_font':  {'size': 14 },
+                'major_gridlines': {'visible': False},
+        })
+
+        chart_isotherm.set_plotarea({
+                'border': {'color': 'black', 'width': 1.25}
+            })
+
+        chart_isotherm.set_size({'x_scale': 1.45, 'y_scale': 1.6})
+
+        worksheet_iso.insert_chart('H5', chart_isotherm)
 
         ## Creating BET sheet
         sheetname = 'BET'
+
+        # -- full bet plot ---
+        bet_start_row = 13
 
         main_bet_points = {
             'pressure' : self.isotherm.pressure(branch='ads'),
@@ -262,8 +344,9 @@ class BET:
 
         df_main_bet_points = pd.DataFrame(main_bet_points)
         df_main_bet_points.to_excel(writer, sheet_name=sheetname,
-             startcol=0, startrow=0, index=False)
+             startcol=0, startrow=bet_start_row, index=False)
 
+        # -- selected bet plot from roq criteria
         bet_minimum = self.BET_results['minimum']
         bet_maximum = self.BET_results['maximum']
 
@@ -280,8 +363,9 @@ class BET:
         
         df_selected_bet_point = pd.DataFrame(selected_bet_point)
         df_selected_bet_point.to_excel(writer, sheet_name=sheetname,
-             startcol=2, startrow=0, index=False)
+             startcol=2, startrow=bet_start_row, index=False)
 
+        # -- selected monolayer point ---
         bet_p_monolayer = self.BET_results['p_monolayer']
         bet_n_monolayer = self.BET_results['n_monolayer']
 
@@ -292,79 +376,101 @@ class BET:
 
         df_monolayer_point = pd.DataFrame(bet_monolayer_point)
         df_monolayer_point.to_excel(writer, sheet_name=sheetname,
-             startcol=4, startrow=0, index=False)
-
-        worksheet = writer.sheets[sheetname]
+             startcol=4, startrow=bet_start_row, index=False)
         
-        # Writing BET_results dictonary to excel sheet
-        col_num = 7  # The start column number
+        # -- instanciating the bet worksheet
+        worksheet = writer.sheets[sheetname]
+
+        # -- writing BET_results dictonary to excel sheet
+        row_num = 0  # The start column number
         for key, value in self.BET_results.items(): # Convert non-list value to list
-            if type(value) == list:  
-                pass
-            else:
+            worksheet.write(row_num, 0, key, cell_format)
+            if not type(value) == list:  
                 value = [value]
-            worksheet.write(0, col_num, key)
-            worksheet.write_column(1, col_num, value)
-            col_num += 1
+            worksheet.write_row(row_num, 1, value)
+            if key == 'bet_area':
+                worksheet.write(row_num, 2, 'm^2/g', cell_format_it)
+            if key == 'n_monolayer':
+                worksheet.write_string(row_num, 2, 'mol/g', cell_format_it)
+            row_num += 1
 
-        # Plotting BET
-
-        workbook = writer.book
-
+        # -- plotting BET
         chart = workbook.add_chart({'type' : 'scatter'})
 
         rows_bet_mp, _ = df_main_bet_points.shape
         chart.add_series({
                                     'name': 'All Points',
-                                    'categories': [sheetname, 1, 0, rows_bet_mp, 0],
-                                    'values':  [sheetname, 1, 1, rows_bet_mp, 1],
+                                    'categories': [sheetname, bet_start_row+1, 0, bet_start_row+rows_bet_mp+1, 0],
+                                    'values':  [sheetname, 14, 1, bet_start_row+rows_bet_mp+1, 1],
                                     'marker': {
                                                 'type': 'circle',
-                                                'size': 9,
+                                                'size': 8,
                                                 'fill' : {'color': 'white'},
-                                                'border': {'color': 'gray'},
+                                                'border': {
+                                                    'color': 'gray',
+                                                    'width' : 1.5},
                                                 }
                                 })
         row_bet_sel, _ = df_selected_bet_point.shape
         chart.add_series({
                                     'name': 'Selected Points',
-                                    'categories': [sheetname, 1, 2, row_bet_sel, 2],
-                                    'values':  [sheetname, 1, 3, row_bet_sel, 3],
+                                    'categories': [sheetname, 14, 2, bet_start_row+row_bet_sel+1, 2],
+                                    'values':  [sheetname, 14, 3, bet_start_row+row_bet_sel+1, 3],
                                     'marker': {
                                                 'type': 'circle',
-                                                'size': 9,
-                                                'border': {'color': 'red'},
-                                                }
-                                })
+                                                'size': 8,
+                                                'fill': {'color': 'red'},
+                                                'border' : {'color' : 'red'}
+                                                },
+                                    'trendline': {
+                                        'type': 'linear',
+                                        'name' : 'fit',
+                                        'line': {
+                                        'width': 1.2,
+                                        'dash_type': 'long_dash'},
+                                    },
+                            })
 
         row_bet_mono, _ = df_monolayer_point.shape
         chart.add_series({
-                                    'name': 'Monolayer Points',
-                                    'categories' : [sheetname, 1, 4, row_bet_mono, 4],
-                                    'values':  [sheetname, 1, 5, row_bet_mono, 5],
+                                    'name': 'Monolayer Point',
+                                    'categories' : [sheetname, 14, 4, bet_start_row+row_bet_mono+1, 4],
+                                    'values':  [sheetname, 14, 5, bet_start_row+row_bet_mono+1, 5],
                                     'marker': {
-                                                'type': 'square',
-                                                'size': 9,
-                                                'border': {'color': 'black'},
+                                                'type': 'x',
+                                                'size': 8,
+                                                'fill' : {'color' : 'black'},
+                                                'border' : {'color' : 'black'}
                                                 }
                                 })
         
         chart.set_x_axis({
                     'name': 'Pressure [p/p0]',
+                    'name_font' : {'size' : 18},
                     'num_format' : '0.00',
+                    'num_font':  {'size': 13 },
                     'min' : 0,
                     'max' : self.BET_results['pressure_range'][1]
             })
 
         chart.set_y_axis({
                 'name': 'BET value',
+                'name_font' : {'size' : 18},
+                'num_font':  {'size': 13 },
                 'min' : 0,
-                'max' : 1.2*df_selected_bet_point.iloc[:, 1].max()
+                'max' : 1.3*df_selected_bet_point.iloc[:, 1].max(),
+                'major_gridlines': {'visible': False},
         })
 
-        #chart.set_size({'x_scale': 1.5, 'y_scale': 2})
+        chart.set_plotarea({
+                'border': {'color': 'black', 'width': 1.25}
+            })
 
-        worksheet.insert_chart('E10', chart)
+        chart.set_size({'x_scale': 1.45, 'y_scale': 1.6})
+
+        worksheet.insert_chart('H5', chart)
+
+        #Plotting Rouquerol 
   
         writer.save()
 
