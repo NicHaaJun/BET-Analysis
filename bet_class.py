@@ -305,13 +305,13 @@ class BET:
                     'name': 'Pressure [p/p0]',
                     'name_font' : {'size' : 18},
                     'num_format' : '0.00',
-                    'num_font':  {'size': 13 },
+                    'num_font':  {'size': 13},
                     'max' : 1,
                     'min' : 0,
             })
 
         chart_isotherm.set_y_axis({
-                'name': 'Loading [ml/g (STP)]',
+                'name': 'Loading (ml/g [STP])',
                 'name_font' : {'size' : 18},
                 'num_font':  {'size': 14 },
                 'major_gridlines': {'visible': False},
@@ -445,7 +445,7 @@ class BET:
                                 })
         
         chart.set_x_axis({
-                    'name': 'Pressure [p/p0]',
+                    'name': 'Pressure (p/p0)',
                     'name_font' : {'size' : 18},
                     'num_format' : '0.00',
                     'num_font':  {'size': 13 },
@@ -454,7 +454,7 @@ class BET:
             })
 
         chart.set_y_axis({
-                'name': 'BET value',
+                'name': '1/[n(p0/p - 1)]',
                 'name_font' : {'size' : 18},
                 'num_font':  {'size': 13 },
                 'min' : 0,
