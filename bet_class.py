@@ -229,7 +229,7 @@ class BET:
         
         writer = pd.ExcelWriter(res_path, engine='xlsxwriter')
 
-        ## Creating isotherm dataframes
+        ## Creating isotherm sheet
         df_isotherm = []
         for branch in ['ads', 'des']:
             isotherm_points = {
@@ -246,8 +246,9 @@ class BET:
              startcol=start_cols[i], startrow=11, index=False)
 
 
-        ## Creating BET dataframe
-        
+        ## Creating BET sheet
+        sheetname = 'BET'
+
         main_bet_points = {
             'pressure' : self.isotherm.pressure(branch='ads'),
             'bet_points' : bet_transform(
@@ -260,8 +261,8 @@ class BET:
         }
 
         df_main_bet_points = pd.DataFrame(main_bet_points)
-        df_main_bet_points.to_excel(writer, sheet_name='BET',
-             startcol=0, startrow=11, index=False)
+        df_main_bet_points.to_excel(writer, sheet_name=sheetname,
+             startcol=0, startrow=0, index=False)
 
         bet_minimum = self.BET_results['minimum']
         bet_maximum = self.BET_results['maximum']
@@ -278,21 +279,93 @@ class BET:
         }
         
         df_selected_bet_point = pd.DataFrame(selected_bet_point)
-        df_selected_bet_point.to_excel(writer, sheet_name='BET',
-             startcol=2, startrow=11, index=False)
+        df_selected_bet_point.to_excel(writer, sheet_name=sheetname,
+             startcol=2, startrow=0, index=False)
 
         bet_p_monolayer = self.BET_results['p_monolayer']
         bet_n_monolayer = self.BET_results['n_monolayer']
 
         bet_monolayer_point = {
-            'pressure_monolayer' : bet_p_monolayer,
-            'bet_point_monolayer' : bet_transform(bet_p_monolayer, bet_n_monolayer)
+            'pressure_monolayer' : [bet_p_monolayer],
+            'bet_point_monolayer' : [bet_transform(bet_p_monolayer, bet_n_monolayer)]
         }
 
         df_monolayer_point = pd.DataFrame(bet_monolayer_point)
-        df_monolayer_point.to_excel(writer, sheet_name='BET',
-             startcol=4, startrow=11, index=False)
+        df_monolayer_point.to_excel(writer, sheet_name=sheetname,
+             startcol=4, startrow=0, index=False)
 
+        worksheet = writer.sheets[sheetname]
+        
+        # Writing BET_results dictonary to excel sheet
+        col_num = 7  # The start column number
+        for key, value in self.BET_results.items(): # Convert non-list value to list
+            if type(value) == list:  
+                pass
+            else:
+                value = [value]
+            worksheet.write(0, col_num, key)
+            worksheet.write_column(1, col_num, value)
+            col_num += 1
+
+        # Plotting BET
+
+        workbook = writer.book
+
+        chart = workbook.add_chart({'type' : 'scatter'})
+
+        rows_bet_mp, _ = df_main_bet_points.shape
+        chart.add_series({
+                                    'name': 'All Points',
+                                    'categories': [sheetname, 1, 0, rows_bet_mp, 0],
+                                    'values':  [sheetname, 1, 1, rows_bet_mp, 1],
+                                    'marker': {
+                                                'type': 'circle',
+                                                'size': 9,
+                                                'fill' : {'color': 'white'},
+                                                'border': {'color': 'gray'},
+                                                }
+                                })
+        row_bet_sel, _ = df_selected_bet_point.shape
+        chart.add_series({
+                                    'name': 'Selected Points',
+                                    'categories': [sheetname, 1, 2, row_bet_sel, 2],
+                                    'values':  [sheetname, 1, 3, row_bet_sel, 3],
+                                    'marker': {
+                                                'type': 'circle',
+                                                'size': 9,
+                                                'border': {'color': 'red'},
+                                                }
+                                })
+
+        row_bet_mono, _ = df_monolayer_point.shape
+        chart.add_series({
+                                    'name': 'Monolayer Points',
+                                    'categories' : [sheetname, 1, 4, row_bet_mono, 4],
+                                    'values':  [sheetname, 1, 5, row_bet_mono, 5],
+                                    'marker': {
+                                                'type': 'square',
+                                                'size': 9,
+                                                'border': {'color': 'black'},
+                                                }
+                                })
+        
+        chart.set_x_axis({
+                    'name': 'Pressure [p/p0]',
+                    'num_format' : '0.00',
+                    'min' : 0,
+                    'max' : self.BET_results['pressure_range'][1]
+            })
+
+        chart.set_y_axis({
+                'name': 'BET value',
+                'min' : 0,
+                'max' : 1.2*df_selected_bet_point.iloc[:, 1].max()
+        })
+
+        #chart.set_size({'x_scale': 1.5, 'y_scale': 2})
+
+        worksheet.insert_chart('E10', chart)
+  
         writer.save()
 
         return
