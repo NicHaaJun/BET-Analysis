@@ -28,18 +28,12 @@ class BET:
 
         def clean_df(df):
             
-            volume_to_mols = lambda x: x*1e-6*100e3/(273.15*R)  # Calculating mass
-            STP_to_real = lambda x: x/(273.15/77.36)
-
             df.drop(columns=['No.', 'Unnamed: 5'], index=0, inplace=True)
-            df['Pe/P0'] = df['Pe/kPa']/df['P0/kPa']
+            df['Pe/P0'] = np.round(df['Pe/kPa']/df['P0/kPa'], 4)
 
             columns = df.columns.to_list()
             new_column_order = [columns[-1]] + columns[:-1]
-            df = df[new_column_order].copy()
-            
-            df['V/real mlg-1'] = STP_to_real(df['V/ml(STP) g-1'])
-            
+            df = df[new_column_order].copy()    
             return df
 
         # Here we look for the line no. definint adsorption and desorption data
@@ -226,6 +220,8 @@ class BET:
             res_path = os.path.join('RESULTS', 'ISOTHERM_' + result_file_name + '.xlsx')
             if not os.path.isdir('RESULTS'):
                 os.mkdir('RESULTS')
+        else:
+            res_path = filepath
         
         writer = pd.ExcelWriter(res_path, engine='xlsxwriter')  # Defining the xlsx writer
         workbook = writer.book  # Definint the workbook
@@ -233,7 +229,7 @@ class BET:
         cell_format_it = workbook.add_format({'italic': True}) # cell format "italic"
 
         ## Creating isotherm sheet
-        isotherm_sheet = 'isotherm'
+        isotherm_sheet = 'Isotherm'
         df_isotherm = []
         for branch in ['ads', 'des']:
             isotherm_points = {
@@ -401,7 +397,7 @@ class BET:
         chart.add_series({
                                     'name': 'All Points',
                                     'categories': [sheetname, bet_start_row+1, 0, bet_start_row+rows_bet_mp+1, 0],
-                                    'values':  [sheetname, 14, 1, bet_start_row+rows_bet_mp+1, 1],
+                                    'values':  [sheetname, bet_start_row+1, 1, bet_start_row+rows_bet_mp+1, 1],
                                     'marker': {
                                                 'type': 'circle',
                                                 'size': 8,
@@ -414,8 +410,8 @@ class BET:
         row_bet_sel, _ = df_selected_bet_point.shape
         chart.add_series({
                                     'name': 'Selected Points',
-                                    'categories': [sheetname, 14, 2, bet_start_row+row_bet_sel+1, 2],
-                                    'values':  [sheetname, 14, 3, bet_start_row+row_bet_sel+1, 3],
+                                    'categories': [sheetname, bet_start_row+1, 2, bet_start_row+row_bet_sel+1, 2],
+                                    'values':  [sheetname, bet_start_row+1, 3, bet_start_row+row_bet_sel+1, 3],
                                     'marker': {
                                                 'type': 'circle',
                                                 'size': 8,
@@ -434,8 +430,8 @@ class BET:
         row_bet_mono, _ = df_monolayer_point.shape
         chart.add_series({
                                     'name': 'Monolayer Point',
-                                    'categories' : [sheetname, 14, 4, bet_start_row+row_bet_mono+1, 4],
-                                    'values':  [sheetname, 14, 5, bet_start_row+row_bet_mono+1, 5],
+                                    'categories' : [sheetname, bet_start_row+1, 4, bet_start_row+row_bet_mono+1, 4],
+                                    'values':  [sheetname, bet_start_row+1, 5, bet_start_row+row_bet_mono+1, 5],
                                     'marker': {
                                                 'type': 'x',
                                                 'size': 8,
@@ -467,13 +463,146 @@ class BET:
             })
 
         chart.set_size({'x_scale': 1.45, 'y_scale': 1.6})
-
         worksheet.insert_chart('H5', chart)
 
-        #Plotting Rouquerol 
-  
-        writer.save()
+        # --- Rouquerol ---
 
+        roq_sheet = 'Rouquerol'
+
+        roq_start_row = 0
+
+        main_roq_points = {
+            'pressure' : self.isotherm.pressure(branch='ads'),
+            'roq_points' : roq_transform(
+                self.isotherm.pressure(branch='ads'),
+                self.isotherm.loading(
+                         branch='ads',
+                         loading_unit='mol',
+                         loading_basis='molar')
+                         )
+        }
+
+        df_main_roq_points = pd.DataFrame(main_roq_points)
+        df_main_roq_points.to_excel(writer, sheet_name=roq_sheet,
+             startcol=0, startrow=roq_start_row, index=False)
+
+        # -- selected bet plot from roq criteria
+        bet_minimum = self.BET_results['minimum']
+        bet_maximum = self.BET_results['maximum']
+
+        selected_roq_point = {
+            'pressure_selected' : self.isotherm.pressure(branch='ads')[bet_minimum:bet_maximum],
+            'roq_points_selected' : roq_transform(
+                self.isotherm.pressure(branch='ads'),
+                self.isotherm.loading(
+                         branch='ads',
+                         loading_unit='mol',
+                         loading_basis='molar')
+                         )[bet_minimum:bet_maximum]
+        }
+        
+        df_selected_roq_point = pd.DataFrame(selected_roq_point)
+        df_selected_roq_point.to_excel(writer, sheet_name=roq_sheet,
+             startcol=2, startrow=roq_start_row, index=False)
+
+        # -- selected monolayer point ---
+        bet_p_monolayer = self.BET_results['p_monolayer']
+        bet_n_monolayer = self.BET_results['n_monolayer']
+
+        roq_monolayer_point = {
+            'pressure_monolayer' : [bet_p_monolayer],
+            'bet_point_monolayer' : [roq_transform(bet_p_monolayer, bet_n_monolayer)]
+        }
+
+        df_roq_monolayer_point = pd.DataFrame(roq_monolayer_point)
+        df_roq_monolayer_point.to_excel(writer, sheet_name=roq_sheet,
+             startcol=4, startrow=roq_start_row, index=False)
+
+        # -- plotting roq plot ---
+        chart_roq = workbook.add_chart({'type' : 'scatter'})
+
+        rows_roq_mp, _ = df_main_roq_points.shape
+        chart_roq.add_series({
+                                    'name': 'All Points',
+                                    'categories': [roq_sheet, roq_start_row+1, 0, roq_start_row+rows_roq_mp+1, 0],
+                                    'values':  [roq_sheet, roq_start_row+1, 1, roq_start_row+rows_roq_mp+1, 1],
+                                    'marker': {
+                                                'type': 'circle',
+                                                'size': 8,
+                                                'fill' : {'color': 'white'},
+                                                'border': {
+                                                    'color': 'gray',
+                                                    'width' : 1.5},
+                                                }
+                                })
+        row_roq_sel, _ = df_selected_roq_point.shape
+        chart_roq.add_series({
+                                    'name': 'Selected Points',
+                                    'categories': [roq_sheet, roq_start_row+1, 2, roq_start_row+row_roq_sel+1, 2],
+                                    'values':  [roq_sheet, roq_start_row+1, 3, roq_start_row+row_roq_sel+1, 3],
+                                    'marker': {
+                                                'type': 'circle',
+                                                'size': 8,
+                                                'fill': {'color': 'red'},
+                                                'border' : {'color' : 'red'}
+                                                },
+                            })
+
+        row_roq_mono, _ = df_roq_monolayer_point.shape
+        chart_roq.add_series({
+                                    'name': 'Monolayer Point',
+                                    'categories' : [roq_sheet, roq_start_row+1, 4, roq_start_row+row_roq_mono+1, 4],
+                                    'values':  [roq_sheet, roq_start_row+1, 5, roq_start_row+row_roq_mono+1, 5],
+                                    'marker': {
+                                                'type': 'x',
+                                                'size': 8,
+                                                'fill' : {'color' : 'black'},
+                                                'border' : {'color' : 'black'}
+                                                }
+                                })
+        
+        chart_roq.set_x_axis({
+                    'name': 'Pressure (p/p0)',
+                    'name_font' : {'size' : 18},
+                    'num_format' : '0.00',
+                    'num_font':  {'size': 13 },
+                    'min' : 0,
+                    'max' : 1.0
+            })
+
+        chart_roq.set_y_axis({
+                'name': 'n(1 - p/p0)',
+                'name_font' : {'size' : 18},
+                'num_font':  {'size': 13 },
+                'num_format' : '0.0E+00',
+                'min' : 0,
+                'major_gridlines': {'visible': False},
+        })
+
+        chart_roq.set_plotarea({
+                'border': {'color': 'black', 'width': 1.25}
+            })
+
+        chart_roq.set_size({'x_scale': 1.45, 'y_scale': 1.6})
+
+        roq_worksheet = writer.sheets[roq_sheet]
+        roq_worksheet.insert_chart('H5', chart_roq)
+
+        ## Writing raw data
+
+        raw_data_sheet = 'Raw Data'
+
+        self.adsorption_data.to_excel(writer, sheet_name=raw_data_sheet,
+             startcol=0, startrow=1, index=False)
+
+        self.desorption_data.to_excel(writer, sheet_name=raw_data_sheet,
+             startcol=5, startrow=1, index=False)
+
+        raw_worksheet = writer.sheets[raw_data_sheet]
+        raw_worksheet.write_string(0, 0, 'Adsorption', cell_format)
+        raw_worksheet.write_string(0, 5, 'Desorption', cell_format)
+
+        writer.save()
         return
 
     ### METHOD WHICH GETS THE RESULT PATH
