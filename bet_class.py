@@ -232,17 +232,15 @@ class BET:
 
         return
 
-    def to_excel(self, filepath='default'):
+    def to_excel(self, filepath=None):
 
         ## Geeting file path
-        _, result_file_name, result_path = self._get_result_path()
+        _, result_file_name, default_path = self._get_result_path()
 
-        if filepath == 'default':
-            res_path = os.path.join('RESULTS', 'ISOTHERM_' + result_file_name + '.xlsx')
-            if not os.path.isdir('RESULTS'):
-                os.mkdir('RESULTS')
+        if not filepath:
+            res_path = os.path.join(default_path, 'results_' + result_file_name + '.xlsx')
         else:
-            res_path = filepath
+            res_path = os.path.join(filepath, 'results_' + result_file_name + '.xlsx')
         
         writer = pd.ExcelWriter(res_path, engine='xlsxwriter')  # Defining the xlsx writer
         workbook = writer.book  # Definint the workbook
@@ -638,14 +636,14 @@ class BET:
     def _get_result_path(self):
 
         list_path = self.file.split('\\')
-        result_folder = '\\'.join(list_path[:-1] + ['RESULTS'])
+        default_result_folder = '\\'.join(list_path[:-1] + ['RESULTS'])
         file_name = list_path[-1].split('.')[0]
         result_file_name = file_name + '_result'
 
-        if os.path.isdir(result_folder):
-            result_path = os.path.join(result_folder, result_file_name)
+        if os.path.isdir(default_result_folder):
+            result_path = os.path.join(default_result_folder, result_file_name)
         else:
-            os.mkdir(result_folder)
-            result_path = os.path.join(result_folder, result_file_name)
+            os.mkdir(default_result_folder)
+            result_path = os.path.join(default_result_folder, result_file_name)
 
         return file_name, result_file_name, result_path
