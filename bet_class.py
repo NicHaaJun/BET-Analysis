@@ -50,7 +50,28 @@ class BET:
 
                 i += 1
         
-        
+        # --- loading measurment metadata ---
+        instrument_metadata = pd.read_csv(self.file, sep='\t', skiprows=3, nrows=28, names=['instrument', 'value'])
+        instrument_metadata = instrument_metadata.loc[
+                                instrument_metadata['instrument'].isin([
+                                    'Adsorptive:',
+                                    'Meas. Temp./K:',
+                                    'Vs/ml:',
+                                    'Sample weight/g:',
+                                    'Date of measurement:',
+                                    'Time of measurement:'
+                                    ])
+                                ]
+        meta_keys = instrument_metadata.iloc[:, 0].to_list()
+        meta_keys = [key[:-1] for key in meta_keys]
+        meta_values = instrument_metadata.iloc[:, 1].to_list()
+
+        self.metadata = {key: val for key, val in zip(meta_keys, meta_values)}  # metadata dictionary
+        self.metadata['Meas. Time.'] = self.metadata['Date of measurement'] + ' ' + self.metadata['Time of measurement']
+        for key in ['Date of measurement', 'Time of measurement']:
+            del self.metadata[key]
+
+        # --- loading measurment data ---
         no_ads_rows = id_ads[1] - id_ads[0] #  Number of lines spannind the adsorption data
         adsorption_data = pd.read_csv(self.file, sep='\t', skiprows=id_ads[0], nrows=no_ads_rows-1, engine='python')
         adsorption_data = clean_df(adsorption_data)
@@ -76,11 +97,11 @@ class BET:
                         material = 'zeolite',
                         material_basis = 'mass',
                         material_unit = 'g',
-                        adsorbate = 'nitrogen',
-                        temperature = '77',
+                        adsorbate = self.metadata['Adsorptive'],
+                        temperature = str(int(float(self.metadata['Meas. Temp./K']))),
                         temperature_unit = 'K'
-                        
                     )
+
         return isotherm
 
     def plot_isotherm(self):
@@ -601,6 +622,14 @@ class BET:
         raw_worksheet = writer.sheets[raw_data_sheet]
         raw_worksheet.write_string(0, 0, 'Adsorption', cell_format)
         raw_worksheet.write_string(0, 5, 'Desorption', cell_format)
+
+        # -- writing BET_results dictonary to excel sheet
+        row_num = 1  # The start column number
+        raw_worksheet.write_string(0, 11, 'Measurment metadata', cell_format)
+        for key, value in self.metadata.items(): # Convert non-list value to list
+            raw_worksheet.write_string(row_num, 11, key, cell_format)
+            raw_worksheet.write_string(row_num, 12, value)
+            row_num += 1
 
         writer.save()
         return
