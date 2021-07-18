@@ -201,53 +201,47 @@ class BET:
 
     ##### EXPORT METHODS
 
-    def to_json(self, filepath='default'):
+    def to_json(self, filepath=None):
 
-        _, result_file_name, result_path = self._get_result_path()
+        _, result_file_name, default_path = self._get_result_path()
 
-        if filepath == 'default':
-            res_path = os.path.join('RESULTS', 'ISOTHERM_' + result_file_name + '.json')
-            if os.path.isdir('RESULTS'):
-                self.isotherm.to_json(res_path)
-            else:
-                os.mkdir('RESULTS')
-                self.isotherm.to_json(res_path)
-
+        if not filepath:
+            res_path = default_path + '.xlsx'
         else:
-            self.isotherm.to_json(result_path)
+            res_path = os.path.join(filepath, result_file_name + '.xlsx')
+
+        self.isotherm.to_json(res_path)
 
     def to_csv(self, filepath='default'):
 
-        _, result_file_name, result_path = self._get_result_path()
+        _, result_file_name, default_path = self._get_result_path()
 
-        if filepath == 'default':
-            res_path = os.path.join('RESULTS', 'ISOTHERM_' + result_file_name + '.csv')
-            if os.path.isdir('RESULTS'):
-                isotherm_to_csv(self.isotherm, res_path)
-            else:
-                os.mkdir('RESULTS')
-                isotherm_to_csv(self.isotherm, res_path)
+        if not filepath:
+            res_path = default_path + '.csv'
         else:
-            isotherm_to_csv(self.isotherm, result_path)
+            res_path = os.path.join(filepath, result_file_name + '.csv')
 
+        isotherm_to_csv(self.isotherm, res_path)
+        
         return
 
     def to_excel(self, filepath=None):
 
-        ## Geeting file path
+        ##Getting file path
         _, result_file_name, default_path = self._get_result_path()
 
         if not filepath:
-            res_path = os.path.join(default_path, 'results_' + result_file_name + '.xlsx')
+            res_path = default_path + '.xlsx'
         else:
-            res_path = os.path.join(filepath, 'results_' + result_file_name + '.xlsx')
+            res_path = os.path.join(filepath, result_file_name + '.xlsx')
         
+        # -- Instanciating the xlsx writer
         writer = pd.ExcelWriter(res_path, engine='xlsxwriter')  # Defining the xlsx writer
         workbook = writer.book  # Definint the workbook
         cell_format = workbook.add_format({'bold': True, 'italic': True}) # cell format "bold"
         cell_format_it = workbook.add_format({'italic': True}) # cell format "italic"
 
-        ## Creating isotherm sheet
+        # -- Creating isotherm sheet
         isotherm_sheet = 'Isotherm'
         df_isotherm = []
         for branch in ['ads', 'des']:
@@ -340,10 +334,10 @@ class BET:
 
         worksheet_iso.insert_chart('H5', chart_isotherm)
 
-        ## Creating BET sheet
+        # -- Creating the BET sheet
         sheetname = 'BET'
 
-        # -- full bet plot ---
+        # -- full bet plot
         bet_start_row = 13
 
         main_bet_points = {
@@ -380,7 +374,7 @@ class BET:
         df_selected_bet_point.to_excel(writer, sheet_name=sheetname,
              startcol=2, startrow=bet_start_row, index=False)
 
-        # -- selected monolayer point ---
+        # -- selected monolayer point
         bet_p_monolayer = self.BET_results['p_monolayer']
         bet_n_monolayer = self.BET_results['n_monolayer']
 
@@ -484,7 +478,7 @@ class BET:
         chart.set_size({'x_scale': 1.45, 'y_scale': 1.6})
         worksheet.insert_chart('H5', chart)
 
-        # --- Rouquerol ---
+        # -- Rouquerol
 
         roq_sheet = 'Rouquerol'
 
@@ -524,7 +518,7 @@ class BET:
         df_selected_roq_point.to_excel(writer, sheet_name=roq_sheet,
              startcol=2, startrow=roq_start_row, index=False)
 
-        # -- selected monolayer point ---
+        # -- selected monolayer point
         bet_p_monolayer = self.BET_results['p_monolayer']
         bet_n_monolayer = self.BET_results['n_monolayer']
 
@@ -537,7 +531,7 @@ class BET:
         df_roq_monolayer_point.to_excel(writer, sheet_name=roq_sheet,
              startcol=4, startrow=roq_start_row, index=False)
 
-        # -- plotting roq plot ---
+        # -- plotting roq plot
         chart_roq = workbook.add_chart({'type' : 'scatter'})
 
         rows_roq_mp, _ = df_main_roq_points.shape
@@ -607,7 +601,7 @@ class BET:
         roq_worksheet = writer.sheets[roq_sheet]
         roq_worksheet.insert_chart('H5', chart_roq)
 
-        ## Writing raw data
+        # -- Writing raw data
 
         raw_data_sheet = 'Raw Data'
 
