@@ -136,10 +136,8 @@ class BET:
                             'bet_slope': np.round(slope, 2),
                             'bet_intercept': np.round(intercept, 2),
                             'corr_coef': np.round(corr_coef, 5),
-                            'pressure_range' : [
-                                                np.round(self.isotherm.pressure(branch='ads')[minimum], 4),
-                                                np.round(self.isotherm.pressure(branch='ads')[maximum], 4) 
-                                                ],
+                            'p_select_min' : np.round(self.isotherm.pressure(branch='ads')[minimum], 4),
+                            'p_select_max' : np.round(self.isotherm.pressure(branch='ads')[maximum], 4) ,
                             'minimum' : minimum,
                             'maximum' : maximum,
                             'limits': [minimum, maximum]
@@ -459,7 +457,7 @@ class BET:
                     'num_format' : '0.00',
                     'num_font':  {'size': 13 },
                     'min' : 0,
-                    'max' : self.BET_results['pressure_range'][1]
+                    'max' : self.BET_results['p_select_max']
             })
 
         chart.set_y_axis({
@@ -641,3 +639,4 @@ class BET:
             result_path = os.path.join(default_result_folder, result_file_name)
 
         return file_name, result_file_name, result_path
+
