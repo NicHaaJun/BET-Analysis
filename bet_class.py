@@ -149,7 +149,7 @@ class BET:
         file_name, _, _ = self._get_result_path()
 
         fig_bet, ax_bet = plt.subplots(figsize=[5.5, 4.5])
-        _, _, n_monolayer, p_monolayer, slope, intercept, _, _, minimum, maximum, _ = self.BET_results.values()
+        _, _, n_monolayer, p_monolayer, slope, intercept, _, _, _, minimum, maximum, _= self.BET_results.values()
 
         ax_bet = bet_plot(
             self.isotherm.pressure(branch='ads'),
@@ -176,7 +176,7 @@ class BET:
 
         fig_roq, ax_roq = plt.subplots(figsize=[5.5, 4.5])
 
-        _, _, n_monolayer, p_monolayer, slope, intercept, _, _, minimum, maximum, _ = self.BET_results.values()
+        _, _, n_monolayer, p_monolayer, slope, intercept, _, _, _, minimum, maximum, _ = self.BET_results.values()
 
         ax_roq = roq_plot(
             self.isotherm.pressure(branch='ads'),

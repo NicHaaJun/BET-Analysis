@@ -14,7 +14,7 @@ class BetdbExporter:
 
     def push_to_db(self):
         
-        material_name, rs_layer_code = self._get_file_metadata()
+        material_name, reactor_sample, rs_layer_code = self._get_file_metadata()
         
         stmt_zeo = sq.select(Zeolites.internal_id).where(Zeolites.internal_id == material_name)  # Query statement to search for a zeolite material
         stmt_ex = sq.select(Extrudates.internal_id).where(Extrudates.internal_id == material_name)  # Query statement to search for an extrudate material
@@ -63,10 +63,13 @@ class BetdbExporter:
         return 
 
     def _get_file_metadata(self):
+        
+        split_sign = '_'
 
-        material_name, reactor_sample, _ = self.bet_analysis.file.split('\\')[-1].split('_')
+        material_id, reactor_sample, _ = self.bet_analysis.file.split('\\')[-1].split(split_sign)
+        reactor_layer_code = material_id + split_sign + reactor_sample
 
-        return material_name, reactor_sample
+        return material_id, reactor_sample, reactor_layer_code
 
 
 
