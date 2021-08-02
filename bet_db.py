@@ -66,10 +66,10 @@ class BetdbExporter:
         
         split_sign = '_'
 
-        material_id, reactor_sample, _ = self.bet_analysis.file.split('\\')[-1].split(split_sign)
-        reactor_layer_code = material_id + split_sign + reactor_sample
+        material, reactor_sample, layer, descr = self.bet_analysis.file.split('\\')[-1].split(split_sign)
+        reactor_layer_code = material + split_sign + reactor_sample + split_sign + layer
 
-        return material_id, reactor_sample, reactor_layer_code
+        return material, reactor_sample, reactor_layer_code
 
 
 
