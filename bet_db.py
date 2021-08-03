@@ -33,7 +33,12 @@ class BetdbExporter:
                 if isinstance(object, np.generic):
                     return object.item()
 
-            bet_res_data = json.dumps(self.bet_analysis.BET_results, default=np_encoder) # Creating json dump of bet_results
+            BET_results = self.bet_analysis.BET_results.copy()
+
+            del BET_results['limits']
+
+            #bet_res_data = json.dumps(BET_results, default=np_encoder) # Creating json dump of bet_results
+            bet_res_data = json.loads(json.dumps(BET_results, default=np_encoder))
 
             bet_anal = GasAdsorptionAnalysis(
                                     adsorptive=self.bet_analysis.metadata['Adsorptive'],
