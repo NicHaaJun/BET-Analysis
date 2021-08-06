@@ -28,8 +28,8 @@ class BET:
 
         def clean_df(df):
             
-            df.drop(columns=['No.', 'Unnamed: 5'], index=0, inplace=True)
-            df['Pe/P0'] = np.round(df['Pe/kPa']/df['P0/kPa'], 4)
+            df.drop(columns=['No.', 'Unnamed: 5'], inplace=True)
+            df['Pe/P0'] = df['Pe/kPa']/df['P0/kPa']
 
             columns = df.columns.to_list()
             new_column_order = [columns[-1]] + columns[:-1]
@@ -131,7 +131,7 @@ class BET:
         BET_results = {
                             'bet_area': np.round(bet_area, 2),
                             'c_const': np.round(c_const, 2),
-                            'n_monolayer': np.round(n_monolayer, 4),
+                            'n_monolayer': n_monolayer,
                             'p_monolayer': np.round(p_monolayer, 4),
                             'bet_slope': np.round(slope, 2),
                             'bet_intercept': np.round(intercept, 2),
