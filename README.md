@@ -17,7 +17,7 @@ voila BET_dashboard.ipynb
 But giving your local database credentials you can connect directly to the database
 and commit analysis results.
 
-![image](https://user-images.githubusercontent.com/70808555/130830014-b1217bf3-4be1-49e0-80f3-e31ea241efc8.png)
+![image](https://user-images.githubusercontent.com/70808555/130830014-b1217bf3-4be1-49e0-80f3-e31ea241efc8.png) ![image](https://user-images.githubusercontent.com/70808555/130830200-cc5e1112-a425-4b91-9fa9-a84297e6b4f3.png)
 
 
 
